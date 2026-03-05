@@ -1,5 +1,6 @@
 import express from 'express'
 import dotenv from 'dotenv'
+import { serialize } from 'cookie'
 
 dotenv.config({ path: ".env.local" })
 
@@ -27,7 +28,22 @@ function authTokenIsValid(token) {
 }
 
 function requireAuth(req, res, next) {
-  next()
+  if (req.cookies && authTokenIsValid(req.cookies.auth)) {
+    next()
+  } else {
+    res.status(401).send({
+      err: "Unauthorized"
+    })
+  }
+}
+
+function setAuthCookie(res, token) {
+  res.setHeader("Set-Cookie", serialize("auth", token, {
+    path: "/",
+    httpOnly: true,
+    // secure: true,
+    expires: new Date(Date.now() + 8 * 60 * 60 * 1000)
+  }))
 }
 
 app.use(express.json())
@@ -40,9 +56,8 @@ app.get("/api/user", requireAuth, (req, res) => {
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body
   if (credentialsAreValid(username, password)) {
-    res.status(200).send({
-      token: generateAuthToken(username)
-    })
+    setAuthCookie(res, generateAuthToken(username))
+    res.status(200).send({ msg: "OK!" })
   } else {
     res.status(401).send({ err: "Invalid credentials" })
   }

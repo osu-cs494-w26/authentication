@@ -9,6 +9,8 @@ export default function Home() {
       const body = await res.json()
       setUser(body)
     }
+    // const token = window.localStorage.getItem("token")
+    // console.log("== token:", token)
     fetchData()
   }, [])
 
