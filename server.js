@@ -1,6 +1,7 @@
 import express from 'express'
 import dotenv from 'dotenv'
 import { serialize } from 'cookie'
+import cookieParser from 'cookie-parser'
 
 dotenv.config({ path: ".env.local" })
 
@@ -47,6 +48,7 @@ function setAuthCookie(res, token) {
 }
 
 app.use(express.json())
+app.use(cookieParser())
 
 app.get("/api/user", requireAuth, (req, res) => {
   const { password, ...body } = USER
