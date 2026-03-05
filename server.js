@@ -14,6 +14,10 @@ const TOKEN = "abcd1234"
 const app = express()
 const port = 8000
 
+function credentialsAreValid(username, password) {
+    return username === USER.username && password === USER.password
+}
+
 function generateAuthToken(username) {
     return TOKEN
 }
@@ -22,11 +26,26 @@ function authTokenIsValid(token) {
     return token === TOKEN
 }
 
+function requireAuth(req, res, next) {
+  next()
+}
+
 app.use(express.json())
 
-app.get("/api/user", (req, res) => {
+app.get("/api/user", requireAuth, (req, res) => {
   const { password, ...body } = USER
   res.status(200).send(body)
+})
+
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body
+  if (credentialsAreValid(username, password)) {
+    res.status(200).send({
+      token: generateAuthToken(username)
+    })
+  } else {
+    res.status(401).send({ err: "Invalid credentials" })
+  }
 })
 
 app.get("/api/githubUserEmail", async (req, res) => {
