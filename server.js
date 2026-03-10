@@ -5,6 +5,13 @@ import cookieParser from 'cookie-parser'
 
 dotenv.config({ path: ".env.local" })
 
+const clientId = process.env.VITE_CLIENT_ID
+const clientSecret = process.env.CLIENT_SECRET
+let accessToken = null
+
+console.log("== clientId:", clientId)
+console.log("== clientSecret:", clientSecret)
+
 const USER = {
   username: "luke",
   password: "hunter2",
@@ -65,14 +72,45 @@ app.post("/api/login", (req, res) => {
   }
 })
 
-app.get("/api/githubUserEmail", async (req, res) => {
-  const githubRes = await fetch("https://api.github.com/user/emails", {})
+app.get("/api/githubUserEmail", requireAuth, async (req, res) => {
+  const githubRes = await fetch("https://api.github.com/user/emails", {
+    headers: {
+      "Authorization": `Bearer ${accessToken}`
+    }
+  })
   const githubResBody = await githubRes.json()
   res.status(githubRes.status).send(githubResBody)
 })
 
-app.get("/api/tokenExchange", (req, res) => {
-  res.status(200).send({ msg: "OK!" })
+app.post("/api/tokenExchange", async (req, res) => {
+  const { code } = req.body
+  if (code) {
+    const githubRes = await fetch(
+      "https://github.com/login/oauth/access_token",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code: code
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        }
+      }
+    )
+    const githubResBody = await githubRes.json()
+    if (githubResBody.access_token) {
+      accessToken = githubResBody.access_token
+      setAuthCookie(res, generateAuthToken())
+      res.status(200).send({ msg: "OK!" })
+    } else {
+      res.status(401).send({ err: githubResBody.error_description })
+    }
+  } else {
+    res.status(400).send({ err: "Must provide auth code" })
+  }
 })
 
 app.listen(port, () => console.log(`API server listening on port ${port}`))
